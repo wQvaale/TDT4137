@@ -1,2 +1,1 @@
-# TDT4137
-Cognitive Architectures 
+# TDT4137 - Cognitive Architectures 
