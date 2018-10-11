@@ -39,7 +39,7 @@ class Perceptron:
     def one_epoch(self, inputs, desired_output):
         hyperPlane = []
         for i in range(len(inputs[0])):
-            temp = sum(inputs[x][i]*self.weights[x] for x in range(len(inputs)))
+            temp = sum(inputs[x][i]*self.weights[x] for x in range(len(inputs))) - self.threshold
             hyperPlane.append(hard_limiter(temp))
             error = desired_output[i] - hyperPlane[i]
 
