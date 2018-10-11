@@ -1,3 +1,5 @@
+_author_ = "William Kvaale"
+
 from random import random
 from math import exp
 STEP = "step"
@@ -5,11 +7,12 @@ SIGN = "sign"
 SIGMOID = "sigmoid"
 LIN = "lienar"
 
-class Perceptron:
-    """
-    Perceptron class used to implement an Artificial Neural Network
-    """
+EPSILON = 0.001
 
+"""
+Perceptron class used to implement an Artificial Neural Network
+"""
+class Perceptron:
     """
     Initializer
     
@@ -21,7 +24,7 @@ class Perceptron:
         self.outPut = []
         self.learningRate = 0.1
         self.hyperPlane = []
-
+        
     """
     Runs the Perceptron through one epoch
         1. Initialize
@@ -42,11 +45,11 @@ class Perceptron:
 
             # Lets train some weights
             for j in range(len(inputs)):
-                self.weights[j] = self.weights[j-1] + self.weight_correction(inputs[j-1], error)
+                delta_weights = self.weight_correction(inputs[j][i], error)
+                self.weights[j] = self.weights[j] + delta_weights
 
         self.hyperPlane = hyperPlane
         return hyperPlane
-
 
     """
     :param x: Input value for x in iteration p
@@ -55,6 +58,24 @@ class Perceptron:
     """
     def weight_correction(self, x, error):
         return self.learningRate * x * error
+
+
+"""
+Runs until we have squared error less than 0.001
+"""
+def convergence(perceptron, inputs, desired_output):
+    actual_output = perceptron.one_epoch(inputs, desired_output)
+    squared_error = 0
+    try:
+        for a in actual_output:
+            for d in desired_output:
+                squared_error = (a - d)**2
+        if (squared_error> EPSILON):
+            convergence(perceptron, inputs, desired_output)
+        return True
+    except RecursionError:
+        return "Maximum recursion depth exceeded"
+
 
 
 
@@ -71,7 +92,6 @@ def hard_limiter(net_input, case=STEP):
     return net_input
 
 
-
 """
 Main function to test methods
 """
@@ -80,9 +100,20 @@ def main():
     desired_and = [0, 0, 0, 1]
     desired_or = [0, 1, 1, 1]
 
+    convergences = 0
+    fails = 0
     for _ in  range(100):
         p = Perceptron(0.2)
-        print(p.weights)
+
+        if convergence(p, input_list, desired_and):
+            convergences += 1
+        else:
+            fails += 1
+
+    print("\nPerceptron converged", convergences, "times ..."\
+          "\n ... and failed", fails, "times!")
+
+
 
 
 if __name__ == '__main__':
