@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
 # GLOBALS
 DISTANCE = 3.7
 DELTA = 1.2
@@ -12,8 +15,7 @@ def triangle(pos, x0, x1, x2):
     elif (pos >= x1 and pos <= x2):
         value = (x2 - pos) / (x1 - x0)
 
-    if (value > CLIP):
-        value = CLIP
+    value = CLIP if value > CLIP else value
 
     return value
 
@@ -26,10 +28,9 @@ def grade(pos, x0, x1):
     elif (pos <= x0):
         value = 0.0
     else:
-        value = (pos - x0)/(x1 - x0)
+        value = (pos - x0) / (x1 - x0)
 
-    if (value > CLIP):
-        value = CLIP
+    value = CLIP if value > CLIP else value
 
     return value
 
@@ -42,38 +43,45 @@ def reverse_grad(pos, x0, x1):
     elif (pos >= x1):
         value = 0.0
     else:
-        value = (x1 - pos)/(x1 - x0)
+        value = (x1 - pos) / (x1 - x0)
 
-    if (value > CLIP):
-        value = CLIP
+    value = CLIP if value > CLIP else value
 
     return value
 
 
 def fuzzy_op(case, a, b=0):
-   return {
-       'OR': max(a, b),     #  union
-       'AND': min(a, b),    # intersection
-       'NOT': 1 - a         # complement
-   }[case]
+    """
+    Does fuzzy operations on the fuzzy sets
+    :param case: String
+    :param a: float
+    :param b: float
+    :return: float
+    """
+    return {
+        'OR': max(a, b),    # union
+        'AND': min(a, b),   # intersection
+        'NOT': 1 - a        # complement
+    }[case]
 
 
 def evaluation(distance, delta):
     """
-    :param distance:
-    :param delta:
-    :return:
+    Evaluates the rules after the sets have been fuzzicated
+    :param distance: float
+    :param delta: float
+    :return: dict[String] = float
     """
     values = dict()
 
     # Rule 1: IF distance is SMALL AND delta is Growing THEN action is None
-    values["None"] = fuzzy_op("AND",distance["Small"], delta["Growing"])
+    values["None"] = fuzzy_op("AND", distance["Small"], delta["Growing"])
 
     # Rule 2: IF distance is Small AND delta is Stable THEN action is SlowDown
-    values["SlowDown"] = fuzzy_op("AND",distance["Small"], delta["Stable"])
+    values["SlowDown"] = fuzzy_op("AND", distance["Small"], delta["Stable"])
 
     # Rule 3: IF distance is Perfect AND delta is Growing THEN action is SpeedUp
-    values["SpeedUp"] = fuzzy_op("AND",distance["Perfect"], delta["Growing"])
+    values["SpeedUp"] = fuzzy_op("AND", distance["Perfect"], delta["Growing"])
 
     # Rule 4: IF distance is VeryBig AND (delta is NOT Growing OR delta is NOT GrowingFast) THEN action is FloorIt
     values["FloorIt"] = fuzzy_op("AND", distance["VeryBig"],
@@ -83,19 +91,19 @@ def evaluation(distance, delta):
     # Rule 5: IF distance is VerySmall THEN action BrakeHard
     values["BrakeHard"] = distance["VerySmall"]
 
-
     return values
-
 
 
 def aggregate(evaluations, actions):
     """
-    :param evaluations:
-    :param actions:
-    :return:
+    We take the membershipfunctions of alle rule consequents
+    previously clipped and combine them into one signgle fuzzy set
+    :param evaluations: dict[String] = float
+    :param actions: dict[String] = [float]
+    :return: List[String]
     """
     agg = []
-    for x in range(actions["start"], actions["end"] +1):
+    for x in range(actions["start"], actions["end"] + 1):
         value = 0
         for (action, fuzzy_set) in actions["keys"].items():
             if evaluations[action] > 0:
@@ -106,15 +114,45 @@ def aggregate(evaluations, actions):
 
 
 def defuzzycation(agg):
+    """
+    Final output, as a crisp number
+    :param agg: List[float]
+    :return: float
+    """
     numerator = 0
     denominator = 0
     for i in range(len(agg)):
         numerator += (i - 10) * agg[i]
     return numerator / sum(agg)
 
+
+def decideAction(cog):
+    """
+    Returns the action the COG is the center of.
+    :param cog: float
+    :return: String
+    """
+    if cog > -10 and cog <= -6:
+        return "None"
+    elif cog > -6 and cog <= -2:
+        return "SlowDown"
+    elif cog > -2 and cog <= 2:
+        return "None"
+    elif cog > 2 and cog <= 6:
+        return "SpeedUp"
+    elif cog > 6 and cog <= 10:
+        return "FloorIt"
+    else:
+        return "Undefined"
+
+
 def main():
     # D A T A S E T
     # 1. Fuzzification
+    """
+    Take crips inputs, and determine the degree to which
+    these inputs belong to each of the appropriate fuzzy sets
+    """
     global DISTANCE, DELTA
     distance = {
         "start": 0,
@@ -149,20 +187,37 @@ def main():
     }
 
     # 2. Rule Evaluation
+    """
+    Inference: calculate the membership function
+    """
     evals = evaluation(distance, delta)
-    print(evals)
 
     # 3. Aggregation
+    """
+    Unify the outputs of all rules
+    """
     agg = aggregate(evals, actions)
-    print(agg)
-
 
     # 4. Defuzzification
     """
-    Centroid defuzzification method finds a point representing the centre
-    of gravity of the aggregated fuzzy set A, on the interval [a, b ].
+    Centroid defuzzification method finds a point representing the centre of gravity
+    of the aggregated fuzzy set A, on the interval [a, b ]
     """
     cog = defuzzycation(agg)
-    print("COG:",cog)
+    act = decideAction(cog)
+    print("While COG is: {}, the robot will do the following action:\n{}".format(round(cog, 4), act.upper()))
+
+    """
+    # Testing out plotting...
+    plt.plot(cog, 0, marker='o', markerSize=3, color="red")     # Plot COG
+    plt.plot(agg, 'g'                                           # Plot the aggregated sum
+    plt.yticks(range(0,2))                                      # Set range for y-axis
+    plt.xlabel('x')                                             # Set label for x-axis
+    plt.ylabel('weight')                                        # Set label for y-axis
+    plt.grid(True)                                              # Enable grid
+    plt.legend(['COG','Aggregated'])                            # Display element mapping to color
+    plt.show()                                                  # Show it.
+    """
+
 
 main()
