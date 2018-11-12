@@ -129,7 +129,6 @@ for j in range(10000):
         print(str(a_int) + " + " + str(b_int) + " = " + str(out))
 
         # Check if correct prediction
-        check = np.array_equal(d,c)
-        if check:
+        if np.array_equal(d,c):
             print("S U C C E S S!!!")
         print("----------------------")
